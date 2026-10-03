@@ -163,6 +163,10 @@ ol.steps li{margin-bottom:6px}
     <div class="label">EMAILS FOR DATE</div>
     <div class="row"><input type="date" id="sendDate" onchange="loadPlan()"><button class="b-small" style="flex:none" onclick="loadPlan()">↻</button></div>
     <div id="planHead" class="muted" style="margin-top:8px"></div>
+    <div class="row" id="selRow" style="margin-top:10px;display:none">
+      <button class="b-small" onclick="selectAll(true)">☑ Select all</button>
+      <button class="b-small" onclick="selectAll(false)">☐ Select none</button>
+    </div>
   </div>
   <div id="planList"></div>
   <div class="sticky"><button id="btnSend" class="b-green big" style="width:100%" onclick="sendNow()" disabled>📧 SEND</button>
@@ -641,7 +645,13 @@ function renderPlan(){
   if (p.noGroup.length) h += `<div class="card notice">No email group (not sent):<br>• ${p.noGroup.map(esc).join("<br>• ")}</div>`;
   if (p.noReport.length) h += `<div class="card muted">Groups with no report on this date:<br>• ${p.noReport.map(esc).join("<br>• ")}</div>`;
   $("planList").innerHTML = h; countSel();
+  $("selRow").style.display = p.jobs.length ? "flex" : "none";
   $("planList").querySelectorAll(".chip[data-path]").forEach(c => c.onclick = () => openPdf(c.dataset.path));
+}
+function selectAll(on){
+  document.querySelectorAll("#planList input[type=checkbox]").forEach(c => {
+    const j = PLAN.jobs[+c.dataset.i]; c.checked = on && j.files.length > 0; });
+  countSel();
 }
 const selectedJobs = () => [...document.querySelectorAll("#planList input[type=checkbox]:checked")].map(c => PLAN.jobs[+c.dataset.i]).filter(j => j.files.length);
 function countSel(){
