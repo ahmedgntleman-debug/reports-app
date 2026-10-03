@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HZ Reports">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon-192.png">
+<title>HZ Reports</title>
+<style>
+:root{
+  --orange:#FF6B00; --orange-d:#CC5500; --purple:#6C3FC5; --bg:#0A0A0A; --card:#121212; --card2:#181818;
+  --input:#1C1C1C; --border:#2A2A2A; --text:#F0F0F0; --grey:#9A9A9A; --dim:#5E5E5E;
+  --green:#00C96E; --red:#FF4D4D; --amber:#FFC107;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:#0F0F0F;border-bottom:2px solid var(--orange)}
+header img{width:36px;height:36px;border-radius:8px}
+header .t1{font-weight:800;letter-spacing:.5px}
+header .t2{font-size:11px;color:var(--orange);letter-spacing:1.5px;font-weight:600}
+header .live{margin-left:auto;font-size:11px;color:var(--grey);text-align:right}
+main{padding:14px 16px;max-width:680px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}
+.label{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--orange);margin:0 0 8px}
+.row{display:flex;gap:10px;align-items:center}
+.row > *{flex:1}
+input,select,textarea{width:100%;background:var(--input);color:var(--text);border:1px solid var(--border);
+  border-radius:10px;padding:11px 12px;font:inherit;font-size:16px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--orange)}
+textarea{resize:vertical;min-height:64px}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--orange);flex:none}
+button{font:inherit;border-radius:12px;padding:13px 14px;font-weight:700;cursor:pointer;
+  color:var(--text);background:var(--card2);border:1px solid var(--border)}
+button:disabled{opacity:.45;cursor:default}
+.b-orange{background:var(--orange);border-color:var(--orange);color:#0A0A0A}
+.b-purple{background:var(--purple);border-color:var(--purple);color:#fff}
+.b-green{background:var(--green);border-color:var(--green);color:#0A0A0A}
+.b-small{padding:8px 12px;font-size:13px;border-radius:10px;font-weight:600}
+.b-ghost{background:transparent}
+.big{font-size:16px;padding:16px}
+.muted{color:var(--grey);font-size:13px}
+.dim{color:var(--dim);font-size:12px}
+.ok{color:var(--green)} .err{color:var(--red)} .warn{color:var(--amber)} .pur{color:#9C7BFF}
+.bar{height:10px;background:#1E1E1E;border-radius:6px;overflow:hidden;margin:8px 0}
+.bar>div{height:100%;width:0;background:var(--orange);transition:width .6s}
+.bar.indet>div{width:35%!important;animation:ind 1.2s infinite ease-in-out}
+@keyframes ind{0%{margin-left:-35%}100%{margin-left:100%}}
+.log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#77FF99;white-space:pre-wrap;
+  max-height:280px;overflow:auto;background:#0D0D0D;border-radius:10px;padding:10px;margin-top:8px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:#0F0F0F;
+  border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:0;border-radius:0;padding:10px 4px 12px;color:var(--dim);
+  font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button span{font-size:21px;line-height:1}
+nav button.on{color:var(--orange)}
+.view{display:none}.view.on{display:block}
+.job{border-left:4px solid var(--border)}
+.job.prob{border-left-color:var(--amber)} .job.sent{border-left-color:var(--green)}
+.job .top{display:flex;align-items:center;gap:10px}
+.job .name{font-weight:700;font-size:16px}
+.job .state{margin-left:auto;font-size:12px;font-weight:700;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:12px;padding:5px 9px;border-radius:20px;background:#1E1E1E;color:var(--text);border:1px solid var(--border);cursor:pointer}
+.notice{border-color:var(--amber);color:var(--amber);font-size:14px}
+.sticky{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));z-index:4;padding-top:6px;
+  background:linear-gradient(transparent,var(--bg) 30%)}
+.grp{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
+.grp .del{float:right;color:var(--red);background:none;border:0;font-size:18px;padding:2px 6px}
+.grp input,.grp textarea{margin-top:6px}
+.week{display:flex;align-items:center;gap:8px}
+.week b{flex:1;text-align:center;font-size:15px}
+.week button{flex:none;width:46px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:9;
+  background:#222;border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;
+  opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;max-width:640px;margin:0 auto}
+.toast.show{opacity:1;transform:none}
+.center{max-width:420px;margin:8vh auto 0;padding:0 16px;text-align:center}
+.center img{width:84px;height:84px;border-radius:18px}
+#pin{text-align:center;font-size:26px;letter-spacing:8px;margin:18px 0 12px}
+details summary{cursor:pointer;color:var(--grey);font-size:13px;padding:4px 0}
+.field{margin-bottom:10px;text-align:left}
+.field > div{font-size:12px;color:var(--grey);margin-bottom:4px}
+.runrow{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--border);cursor:pointer}
+.runrow:first-child{border-top:0}
+.runrow .what{flex:1}
+.pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1E1E1E}
+ol.steps{text-align:left;color:var(--grey);font-size:14px;padding-left:20px}
+ol.steps li{margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<!-- ═════════ FIRST-TIME SETUP ═════════ -->
+<div id="setup" class="view center">
+  <img src="icon.png" alt="">
+  <h2 style="margin:12px 0 4px">HZ Cinema Reports</h2>
+  <div class="muted" style="margin-bottom:16px">Connect this device (once)</div>
+  <div class="field"><div>GitHub username</div><input id="su_owner" autocapitalize="off" autocomplete="off"></div>
+  <div class="field"><div>Storage repository name</div><input id="su_repo" value="hz-reports" autocapitalize="off"></div>
+  <div class="field"><div>Access token (starts with github_pat_)</div><input id="su_token" type="password" autocomplete="off"></div>
+  <div class="row"><div class="field"><div>Choose a PIN</div><input id="su_pin1" type="password" inputmode="numeric" maxlength="12"></div>
+    <div class="field"><div>Repeat PIN</div><input id="su_pin2" type="password" inputmode="numeric" maxlength="12"></div></div>
+  <button class="b-orange big" style="width:100%" onclick="doSetup()" id="suBtn">Connect</button>
+  <div id="suMsg" class="err" style="margin-top:12px"></div>
+  <div class="dim" style="margin-top:14px">The token is stored on this device only, locked with your PIN.</div>
+</div>
+
+<!-- ═════════ PIN ═════════ -->
+<div id="unlock" class="view center">
+  <img src="icon.png" alt="">
+  <h2 style="margin:12px 0 4px">HZ Cinema Reports</h2>
+  <div class="muted">Enter your PIN</div>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
+  <button class="b-orange big" style="width:100%" id="pinBtn" onclick="unlock()">Open</button>
+  <div id="pinMsg" class="err" style="margin-top:12px"></div>
+  <button class="b-ghost b-small" style="margin-top:28px;border:0;color:var(--dim)" onclick="forgetDevice()">Forgot PIN? Reconnect this device</button>
+</div>
+
+<div id="app" style="display:none">
+<header>
+  <img src="icon.png" alt="">
+  <div><div class="t1">HZ CINEMA</div><div class="t2">REPORTS</div></div>
+  <div class="live" id="live"></div>
+</header>
+
+<main>
+<!-- ═════════ RUN ═════════ -->
+<section id="v-run" class="view on">
+  <div class="card">
+    <div class="label">REPORT DATE</div>
+    <input type="date" id="runDate" onchange="dateHint()">
+    <div id="runHint" class="muted" style="margin-top:8px"></div>
+  </div>
+  <div class="row" style="margin-bottom:12px">
+    <button class="b-orange big" id="btnDaily" onclick="startTask('daily')">▶ DAILY</button>
+    <button class="b-purple big" id="btnWeekly" onclick="startTask('weekly')">📅 WEEKLY</button>
+  </div>
+  <div class="card" id="taskCard">
+    <div class="row"><div class="label" style="margin:0" id="taskTitle">PROGRESS</div><div id="pct" class="muted" style="text-align:right;flex:none"></div></div>
+    <div class="bar" id="bar"><div id="barFill"></div></div>
+    <div id="taskMsg">Ready. Reports run on GitHub — your PC can be off.</div>
+    <div id="taskMeta" class="dim" style="margin-top:4px"></div>
+    <button id="goSend" class="b-green" style="width:100%;margin-top:12px;display:none" onclick="goSendAfterRun()">📧 Review & send emails</button>
+    <details id="logBox" style="margin-top:8px;display:none"><summary>Details</summary><div class="log" id="taskLog"></div></details>
+  </div>
+  <div class="card">
+    <div class="row"><div class="label" style="margin:0">RECENT RUNS</div><button class="b-small" style="flex:none" onclick="loadRuns()">↻</button></div>
+    <div id="runs" style="margin-top:6px"><div class="dim">…</div></div>
+  </div>
+</section>
+
+<!-- ═════════ SEND ═════════ -->
+<section id="v-send" class="view">
+  <div class="card">
+    <div class="label">EMAILS FOR DATE</div>
+    <div class="row"><input type="date" id="sendDate" onchange="loadPlan()"><button class="b-small" style="flex:none" onclick="loadPlan()">↻</button></div>
+    <div id="planHead" class="muted" style="margin-top:8px"></div>
+  </div>
+  <div id="planList"></div>
+  <div class="sticky"><button id="btnSend" class="b-green big" style="width:100%" onclick="sendNow()" disabled>📧 SEND</button>
+  <div id="sendMsg" class="muted" style="text-align:center;margin-top:6px"></div></div>
+</section>
+
+<!-- ═════════ GROUPS ═════════ -->
+<section id="v-groups" class="view">
+  <div class="card week">
+    <button onclick="shiftWeek(-7)">◀</button><b id="weekLbl">…</b><button onclick="shiftWeek(7)">▶</button>
+  </div>
+  <div class="card" style="border-color:var(--purple)">
+    <div class="label">FIXED GROUPS · SAME EVERY WEEK</div>
+    <div class="field"><div>📊 <b>Box Office</b> — every day: Box Office Summary + all_admt (+ weekly all_admt on the last day)</div>
+      <textarea id="fxBox" rows="2" placeholder="emails, separated by comma"></textarea></div>
+    <div class="field" style="margin:0"><div>📅 <b>Weekly only</b> — last day: weekly all_admt (optional)</div>
+      <textarea id="fxWeekly" rows="2" placeholder="emails, separated by comma"></textarea></div>
+  </div>
+  <div class="card">
+    <div class="label">MOVIE GROUPS · THIS WEEK</div>
+    <div class="row" style="flex-wrap:wrap;margin-bottom:10px">
+      <button class="b-orange b-small" onclick="addGroup()">+ Movie</button>
+      <button class="b-small" onclick="copyPrev()">⧉ Copy last week</button>
+      <button class="b-small" id="btnFetch" onclick="fetchMovies()">↻ From cinema system</button>
+    </div>
+    <div id="groupList"></div>
+    <div id="groupsEmpty" class="dim"></div>
+  </div>
+  <details class="card"><summary>📒 Saved distributors</summary><div id="bookList" style="margin-top:8px"></div></details>
+  <datalist id="dlMovies"></datalist><datalist id="dlBook"></datalist>
+  <div class="sticky"><button class="b-orange big" style="width:100%" onclick="saveGroups()" id="btnSaveGroups">Save</button></div>
+</section>
+
+<!-- ═════════ SETTINGS ═════════ -->
+<section id="v-settings" class="view">
+  <div class="card">
+    <div class="label">EMAIL SERVER</div>
+    <div class="field"><div>SMTP server</div><input id="s_smtp_host"></div>
+    <div class="row field"><div><div class="muted">Port</div><input id="s_smtp_port" inputmode="numeric"></div>
+      <div><div class="muted">Security</div><select id="s_security"><option>SSL</option><option>STARTTLS</option><option>None</option></select></div></div>
+    <div class="field"><div>Username</div><input id="s_username" autocapitalize="off"></div>
+    <div class="dim">The Google App Password is kept safely in GitHub (secret <b>SMTP_PASSWORD</b>), not here.</div>
+  </div>
+  <div class="card">
+    <div class="label">SENDER</div>
+    <div class="field"><div>From email</div><input id="s_from_email" autocapitalize="off"></div>
+    <div class="field"><div>From name</div><input id="s_from_name"></div>
+    <div class="field"><div>CC (optional)</div><input id="s_cc" autocapitalize="off"></div>
+    <div class="field"><div>Last day of week</div><select id="s_week_last_day"></select></div>
+  </div>
+  <div class="card">
+    <div class="label">EMAIL TEXT</div>
+    <div class="dim" style="margin-bottom:8px">Use {movie} {date} {week_from} {week_to} {attachments}</div>
+    <div class="field"><div>Subject</div><input id="s_subject"></div>
+    <div class="field"><div>Subject (last day)</div><input id="s_subject_last_day"></div>
+    <div class="field"><div>Body</div><textarea id="s_body" rows="7"></textarea></div>
+  </div>
+  <button class="b-orange big" style="width:100%;margin-bottom:12px" onclick="saveSettings()">Save settings</button>
+  <div class="card">
+    <div class="label">TESTS</div>
+    <div class="row"><input id="testTo" placeholder="send test email to..." autocapitalize="off"><button class="b-small" style="flex:none" onclick="testEmail()">✉ Test email</button></div>
+    <button class="b-small" style="width:100%;margin-top:10px" onclick="startTask('check')">🔌 Test login to cinema system</button>
+    <div class="dim" style="margin-top:8px">Results appear on the Run tab (about 1–2 min).</div>
+  </div>
+  <div class="card">
+    <div class="label">THIS DEVICE</div>
+    <div class="muted" id="devInfo"></div>
+    <div class="row" style="margin-top:10px"><button class="b-small" onclick="lock()">🔒 Lock</button><button class="b-small" onclick="forgetDevice()">Disconnect device</button></div>
+  </div>
+</section>
+</main>
+
+<nav>
+  <button class="on" data-v="run" onclick="tab('run')"><span>▶</span>Run</button>
+  <button data-v="send" onclick="tab('send')"><span>📧</span>Send</button>
+  <button data-v="groups" onclick="tab('groups')"><span>👥</span>Groups</button>
+  <button data-v="settings" onclick="tab('settings')"><span>⚙</span>Settings</button>
+</nav>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════════════
+   HZ Cinema Reports — web app (PC + phone)
+   Data lives in a private GitHub repository; report runs and emails
+   happen on GitHub Actions (workflow .github/workflows/hz.yml).
+   ═══════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const localIso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const isoToDmy = iso => iso ? iso.split("-").reverse().join("/") : "";
+const dmyToDate = s => { const [d,m,y] = s.split("/").map(Number); return new Date(y, m-1, d, 12); };
+const isoToDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d, 12); };
+const dmy = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+const compact = d => `${pad(d.getDate())}${pad(d.getMonth()+1)}${d.getFullYear()}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const WEEKDAYS_PY = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const pyWd = d => (d.getDay() + 6) % 7;
+const normalize = s => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+const splitEmails = t => { const out = [], seen = new Set();
+  String(t || "").split(/[,;\s]+/).forEach(e => { e = e.trim(); if (e && !seen.has(e.toLowerCase())) { seen.add(e.toLowerCase()); out.push(e); } });
+  return out; };
+const EMAIL_RE = /^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$/;
+const COMMON = ["all_admt.pdf", "Box_Office_Summary.pdf"];
+const WF = "hz.yml";
+
+let CFG = null, TOKEN = "", BRANCH = "main";
+const API = () => localStorage.getItem("hz_api") || "https://api.github.com";
+const repoPath = () => `/repos/${CFG.owner}/${CFG.repo}`;
+
+function toast(msg, cls="") { const t = $("toast"); t.className = "toast show " + cls; t.textContent = msg;
+  clearTimeout(t._h); t._h = setTimeout(() => t.className = "toast", 3600); }
+function show(id){ ["setup","unlock"].forEach(v => $(v).classList.toggle("on", v === id)); $("app").style.display = id === "app" ? "block" : "none"; }
+
+/* ── PIN-locked token storage (AES-GCM, key from PIN) ───────── */
+const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pinKey(pin, salt){
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt, iterations:250000, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+}
+async function lockToken(token, pin){
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({name:"AES-GCM", iv}, await pinKey(pin, salt), new TextEncoder().encode(token));
+  return {salt:b64e(salt), iv:b64e(iv), data:b64e(data)};
+}
+async function unlockToken(enc, pin){
+  const data = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64d(enc.iv)}, await pinKey(pin, b64d(enc.salt)), b64d(enc.data));
+  return new TextDecoder().decode(data);
+}
+
+/* ── GitHub API ──────────────────────────────────────────────── */
+async function gh(path, opt = {}, raw = false){
+  const r = await fetch(API() + path, {cache:"no-store", ...opt, headers:{
+    "Authorization": `Bearer ${opt.token || TOKEN}`, "X-GitHub-Api-Version": "2022-11-28",
+    "Accept": raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
+    ...(opt.body ? {"Content-Type":"application/json"} : {}) }});
+  if (r.status === 204) return null;
+  if (r.status === 404) { const e = new Error("not found"); e.status = 404; throw e; }
+  if (!r.ok) {
+    let m = ""; try { m = (await r.json()).message; } catch(_) {}
+    const e = new Error(r.status === 401 ? "GitHub token is not valid or has expired." :
+                        r.status === 403 ? "GitHub refused: " + (m || "check the token permissions") : (m || "GitHub error " + r.status));
+    e.status = r.status; throw e;
+  }
+  return raw ? r : r.json();
+}
+const utf8b64 = s => { const b = new TextEncoder().encode(s); let bin = ""; b.forEach(x => bin += String.fromCharCode(x)); return btoa(bin); };
+const b64utf8 = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
+async function getJson(path, fallback){
+  try { const f = await gh(`${repoPath()}/contents/${path}?ref=${BRANCH}`); return {data: JSON.parse(b64utf8(f.content)), sha: f.sha}; }
+  catch(e){ if (e.status === 404) return {data: fallback, sha: null}; throw e; }
+}
+async function putJson(path, data, sha, message){
+  const body = {message, branch: BRANCH, content: utf8b64(JSON.stringify(data, null, 2) + "\n")};
+  if (sha) body.sha = sha;
+  const r = await gh(`${repoPath()}/contents/${path}`, {method:"PUT", body: JSON.stringify(body)});
+  return r.content.sha;
+}
+async function listDir(path){
+  try { const r = await gh(`${repoPath()}/contents/${path}?ref=${BRANCH}`); return Array.isArray(r) ? r : []; }
+  catch(e){ if (e.status === 404) return []; throw e; }
+}
+async function openPdf(path){
+  const w = window.open("", "_blank");
+  try {
+    const r = await gh(`${repoPath()}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${BRANCH}`, {}, true);
+    const url = URL.createObjectURL(new Blob([await r.arrayBuffer()], {type:"application/pdf"}));
+    if (w) w.location = url; else location.href = url;
+  } catch(e){ if (w) w.close(); toast(e.message, "err"); }
+}
+
+/* ── setup / unlock ──────────────────────────────────────────── */
+async function doSetup(){
+  const owner = $("su_owner").value.trim(), repo = $("su_repo").value.trim(), token = $("su_token").value.trim();
+  const p1 = $("su_pin1").value.trim(), p2 = $("su_pin2").value.trim();
+  $("suMsg").textContent = "";
+  if (!owner || !repo || !token) return $("suMsg").textContent = "Fill in username, repository and token.";
+  if (!/^\d{4,12}$/.test(p1)) return $("suMsg").textContent = "PIN must be 4–12 digits.";
+  if (p1 !== p2) return $("suMsg").textContent = "The two PINs are different.";
+  $("suBtn").disabled = true; $("suBtn").textContent = "Checking…";
+  try {
+    CFG = {owner, repo};
+    const info = await gh(`/repos/${owner}/${repo}`, {token});
+    BRANCH = info.default_branch || "main";
+    await gh(`/repos/${owner}/${repo}/actions/workflows/${WF}`, {token}).catch(e => {
+      throw new Error(e.status === 404 ? "Repository found, but the workflow file .github/workflows/hz.yml is missing." : e.message); });
+    CFG = {owner, repo, branch: BRANCH, enc: await lockToken(token, p1)};
+    localStorage.setItem("hz_cfg", JSON.stringify(CFG));
+    TOKEN = token; sessionStorage.setItem("hz_t", token);
+    ["su_token","su_pin1","su_pin2"].forEach(i => $(i).value = "");
+    startApp();
+  } catch(e){
+    $("suMsg").textContent = e.status === 404 ? "Repository not found — check the username/name, and that the token has access to it." : e.message;
+  } finally { $("suBtn").disabled = false; $("suBtn").textContent = "Connect"; }
+}
+async function unlock(){
+  $("pinMsg").textContent = ""; $("pinBtn").disabled = true;
+  try { TOKEN = await unlockToken(CFG.enc, $("pin").value.trim()); sessionStorage.setItem("hz_t", TOKEN); $("pin").value = ""; startApp(); }
+  catch(_){ $("pinMsg").textContent = "Wrong PIN."; }
+  finally { $("pinBtn").disabled = false; }
+}
+$("pin").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
+function lock(){ TOKEN = ""; sessionStorage.removeItem("hz_t"); show("unlock"); setTimeout(() => $("pin").focus(), 100); }
+function forgetDevice(){
+  if (!confirm("Disconnect this device? You will need the GitHub token again.")) return;
+  localStorage.removeItem("hz_cfg"); sessionStorage.removeItem("hz_t"); localStorage.removeItem("hz_task"); location.reload();
+}
+
+/* ── tabs ────────────────────────────────────────────────────── */
+let current = "run";
+function tab(v){
+  current = v;
+  document.querySelectorAll(".view").forEach(x => x.id.startsWith("v-") && x.classList.toggle("on", x.id === "v-" + v));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  window.scrollTo(0, 0);
+  if (v === "send") loadPlan();
+  if (v === "groups") loadGroups($("runDate").value ? isoToDate($("runDate").value) : new Date());
+  if (v === "settings") loadSettings();
+  if (v === "run") loadRuns();
+}
+
+/* ── settings cache ──────────────────────────────────────────── */
+let SETTINGS = null, SETTINGS_SHA = null;
+async function getSettings(force){
+  if (!SETTINGS || force) { const r = await getJson("data/email_settings.json", {}); SETTINGS = r.data; SETTINGS_SHA = r.sha; }
+  return SETTINGS;
+}
+const lastWd = () => Number(SETTINGS?.week_last_day ?? 2);
+function weekBounds(d, last){ const startWd = (last + 1) % 7; const diff = ((pyWd(d) - startWd) % 7 + 7) % 7;
+  const s = addDays(d, -diff); return [s, addDays(s, 6)]; }
+
+/* ═══ RUN / TASKS ═══════════════════════════════════════════════ */
+function dateHint(){
+  const iso = $("runDate").value; if (!iso) return;
+  const d = isoToDate(iso), name = WEEKDAYS_PY[pyWd(d)];
+  $("runHint").innerHTML = pyWd(d) === lastWd()
+    ? `<span class="pur"><b>${name}</b> — last day of the week: Daily also downloads the weekly all_admt</span>`
+    : `<b>${name}</b> · Weekly range: ${dmy(addDays(d, -6))} → ${dmy(d)}`;
+}
+const LABEL = {daily:"Daily report", weekly:"Weekly report", send:"Sending emails", movies:"Reading movies", test_email:"Test email", check:"Cinema login test"};
+let TASK = null, taskTimer = null;
+
+async function startTask(action, extra = {}, date){
+  if (TASK && !TASK.done) { toast("Please wait — another task is running.", "warn"); return null; }
+  date = date || isoToDmy($("runDate").value);
+  if (["daily","weekly","movies","send"].includes(action) && !date) { toast("Pick a date", "warn"); return null; }
+  const reqId = new Date().toISOString().replace(/\D/g, "").slice(0, 14) + "-" + Math.random().toString(36).slice(2, 7);
+  try {
+    await gh(`${repoPath()}/actions/workflows/${WF}/dispatches`, {method:"POST", body: JSON.stringify({ref: BRANCH,
+      inputs: {action, date: date || "", extra: JSON.stringify(extra), request_id: reqId}})});
+  } catch(e){ toast(e.message, "err"); return null; }
+  TASK = {reqId, action, date, started: Date.now(), runId: null, status: "queued", done: false};
+  localStorage.setItem("hz_task", JSON.stringify(TASK));
+  if (current !== "run" && ["daily","weekly","check"].includes(action)) tab("run");
+  toast(`${LABEL[action]} started on GitHub`);
+  renderTask(); pollTask();
+  return TASK;
+}
+async function findRun(reqId){
+  const r = await gh(`${repoPath()}/actions/workflows/${WF}/runs?per_page=20&event=workflow_dispatch`);
+  return (r.workflow_runs || []).find(x => (x.display_title || "").includes(`[${reqId}]`));
+}
+const STEP_TEXT = {
+  "Set up job": "Starting a GitHub computer…", "Get files": "Getting your data…", "Set up Python": "Preparing…",
+  "Install Python packages": "Preparing…", "Cache browser": "Preparing the browser…", "Install browser": "Preparing the browser…",
+  "Save results": "Saving results…",
+};
+async function pollTask(){
+  clearTimeout(taskTimer);
+  if (!TASK || TASK.done) return;
+  try {
+    if (!TASK.runId) { const run = await findRun(TASK.reqId); if (run) TASK.runId = run.id; }
+    if (TASK.runId) {
+      const run = await gh(`${repoPath()}/actions/runs/${TASK.runId}`);
+      TASK.status = run.status; TASK.conclusion = run.conclusion; TASK.url = run.html_url;
+      if (run.status !== "completed") {
+        const jobs = await gh(`${repoPath()}/actions/runs/${TASK.runId}/jobs`);
+        const steps = (jobs.jobs?.[0]?.steps) || [];
+        TASK.stepsDone = steps.filter(s => s.status === "completed").length; TASK.stepsTotal = steps.length || 9;
+        const cur = steps.find(s => s.status === "in_progress");
+        TASK.stepName = cur ? cur.name : "";
+      } else {
+        TASK.result = await fetchResult(TASK.reqId);
+        TASK.done = true; onTaskDone();
+      }
+      localStorage.setItem("hz_task", JSON.stringify(TASK));
+    } else if (Date.now() - TASK.started > 120000) {
+      TASK.done = true; TASK.conclusion = "failure"; TASK.result = {messages:["GitHub did not start the task. Check that Actions are enabled in the repository."]};
+    }
+  } catch(e){ TASK.lastError = e.message; }
+  renderTask();
+  if (!TASK.done) taskTimer = setTimeout(pollTask, TASK.status === "queued" ? 3000 : 4000);
+}
+async function fetchResult(reqId){
+  for (let i = 0; i < 4; i++) {
+    const r = await getJson(`data/runs/${reqId}.json`, null);
+    if (r.data) return r.data;
+    await new Promise(res => setTimeout(res, 2500));
+  }
+  return null;
+}
+function renderTask(){
+  const t = TASK, bar = $("bar");
+  if (!t) return;
+  const label = LABEL[t.action] || t.action;
+  $("taskTitle").textContent = (label + (t.date ? " · " + t.date : "")).toUpperCase();
+  const busy = !t.done;
+  $("btnDaily").disabled = $("btnWeekly").disabled = busy;
+  $("btnDaily").textContent = busy && t.action === "daily" ? "⏳ RUNNING…" : "▶ DAILY";
+  $("btnWeekly").textContent = busy && t.action === "weekly" ? "⏳ RUNNING…" : "📅 WEEKLY";
+  $("barFill").style.background = t.action === "weekly" ? "var(--purple)" : t.action === "send" ? "var(--green)" : "var(--orange)";
+  const mins = Math.floor((Date.now() - t.started) / 60000), secs = Math.floor((Date.now() - t.started) / 1000) % 60;
+  if (busy) {
+    const pct = t.stepsTotal ? Math.min(95, Math.round(100 * t.stepsDone / t.stepsTotal)) : 3;
+    bar.classList.toggle("indet", t.status === "queued" || !t.runId);
+    $("barFill").style.width = pct + "%"; $("pct").textContent = `${mins}:${pad(secs)}`;
+    $("taskMsg").className = "";
+    $("taskMsg").textContent = !t.runId || t.status === "queued" ? "Waiting for GitHub to start (usually 10–40 s)…"
+      : t.stepName === "Run report task" ? ({daily:"Downloading reports from the cinema system… (2–4 min)", weekly:"Downloading weekly reports…",
+           send:"Sending emails…", movies:"Reading the movie list…", test_email:"Sending test email…", check:"Logging in to the cinema system…"}[t.action])
+      : (STEP_TEXT[t.stepName] || "Working…");
+    $("taskMeta").textContent = t.lastError ? "⚠️ " + t.lastError : "You can close this page — it keeps running on GitHub.";
+    $("live").innerHTML = `<span class="warn">● ${esc(label)}</span><br>${mins}:${pad(secs)}`;
+    $("goSend").style.display = "none"; $("logBox").style.display = "none";
+  } else {
+    bar.classList.remove("indet");
+    const ok = t.conclusion === "success" && (!t.result || t.result.ok !== false);
+    $("barFill").style.width = "100%"; $("barFill").style.background = ok ? "var(--green)" : "var(--red)";
+    $("pct").textContent = "";
+    const msgs = t.result?.messages || [];
+    const last = [...msgs].reverse().find(m => /🎉|✅|❌|⚠️|Sent|Movies on/.test(m)) || msgs[msgs.length - 1] || "";
+    $("taskMsg").className = ok ? "ok" : "err";
+    $("taskMsg").textContent = (ok ? "✅ " : "❌ ") + (last.replace(/^\[[\d:]+\]\s*/, "") || (ok ? "Finished." : "Failed — open Details."));
+    $("taskMeta").innerHTML = (t.result?.finished ? "Finished " + esc(t.result.finished) : "") +
+      (t.url ? ` · <a href="${esc(t.url)}" target="_blank" style="color:var(--dim)">GitHub log</a>` : "");
+    $("taskLog").textContent = msgs.join("\n") || "No details saved.";
+    $("logBox").style.display = "block";
+    $("goSend").style.display = ok && t.action === "daily" ? "block" : "none";
+    $("live").innerHTML = "";
+  }
+}
+function onTaskDone(){
+  const t = TASK;
+  const ok = t.conclusion === "success";
+  toast(`${LABEL[t.action]}: ${ok ? "finished" : "failed"}`, ok ? "ok" : "err");
+  loadRuns();
+  if (t.action === "send" && current === "send") loadPlan();
+  if (t.action === "test_email") $("testTo").placeholder = ok ? "✅ test email sent" : "❌ test failed — see Run tab";
+  if (t.action === "movies") onMoviesLoaded(t);
+}
+function goSendAfterRun(){ $("sendDate").value = $("runDate").value; tab("send"); }
+
+async function loadRuns(){
+  try {
+    const r = await gh(`${repoPath()}/actions/workflows/${WF}/runs?per_page=8`);
+    const runs = r.workflow_runs || [];
+    $("runs").innerHTML = runs.length ? runs.map(x => {
+      const t = (x.display_title || "").replace(/\s*\[.*\]\s*$/, "");
+      const [act, date] = t.split(" ");
+      const st = x.status !== "completed" ? `<span class="pill warn">${esc(x.status)}</span>`
+               : x.conclusion === "success" ? `<span class="pill ok">done</span>` : `<span class="pill err">${esc(x.conclusion || "failed")}</span>`;
+      const when = new Date(x.created_at);
+      return `<div class="runrow" onclick="showRun('${esc((x.display_title.match(/\[(.*)\]/) || [])[1] || "")}', ${x.id})">
+        <div class="what"><b>${esc(LABEL[act] || act)}</b> ${esc(date || "")}<div class="dim">${when.toLocaleString()}</div></div>${st}</div>`;
+    }).join("") : `<div class="dim">No runs yet.</div>`;
+  } catch(e){ $("runs").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+}
+async function showRun(reqId, runId){
+  if (TASK && !TASK.done) return toast("A task is running — its progress is shown above.");
+  const run = await gh(`${repoPath()}/actions/runs/${runId}`);
+  const [act, date] = (run.display_title || "").replace(/\s*\[.*\]\s*$/, "").split(" ");
+  TASK = {reqId, action: act, date, started: new Date(run.created_at).getTime(), runId, status: run.status,
+          conclusion: run.conclusion, url: run.html_url, done: run.status === "completed"};
+  if (TASK.done) TASK.result = reqId ? (await getJson(`data/runs/${reqId}.json`, null)).data : null;
+  renderTask(); if (!TASK.done) pollTask();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+/* ═══ SEND (plan = same rules as mailer.py) ═════════════════════ */
+let PLAN = null;
+const jobKey = (movie, to) => normalize(movie) + "|" + to.map(e => e.toLowerCase()).sort().join(",");
+const sentKey = (date, movie, to) => `${date}|${normalize(movie)}|${to.map(e => e.toLowerCase()).sort().join(",")}`;
+
+async function buildPlan(dateStr){
+  const s = await getSettings(true), last = Number(s.week_last_day ?? 2);
+  const day = dmyToDate(dateStr), [wFrom, wTo] = weekBounds(day, last), isLast = pyWd(day) === last;
+  const folder = `reports/Daily_${compact(day)}`;
+  const [files, groupsFile, sentLog] = await Promise.all([
+    listDir(folder), getJson("data/distributors.json", {weeks:{}}), getJson("data/sent_log.json", {})]);
+  const byName = Object.fromEntries(files.map(f => [f.name, f]));
+  const okPdf = n => byName[n] && byName[n].size > 100;
+  let runMovies = [];
+  if (byName["movies.json"]) {
+    try { runMovies = (await getJson(`${folder}/movies.json`, [])).data.map(m => ({...m, ok: okPdf(m.file)})); } catch(_) {}
+  } else {
+    runMovies = files.filter(f => /\.pdf$/i.test(f.name) && !COMMON.includes(f.name) && !f.name.startsWith("all_admt_weekly_"))
+                     .map(f => ({movie: f.name.slice(0, -4).replace(/_/g, " "), file: f.name, ok: okPdf(f.name)}));
+  }
+  const byNorm = Object.fromEntries(runMovies.map(m => [normalize(m.movie), m]));
+  const groups = (groupsFile.data.weeks || {})[localIso(wFrom)] || [];
+  const fixed = groupsFile.data.fixed || {box_office: [], weekly: []};
+  const common = COMMON.filter(okPdf).map(n => `${folder}/${n}`), commonMissing = COMMON.filter(n => !okPdf(n));
+  let weekly = "";
+  if (isLast) {
+    const wname = `all_admt_weekly_${compact(wFrom)}_to_${compact(wTo)}.pdf`;
+    if (okPdf(wname)) weekly = `${folder}/${wname}`;
+    else {
+      const wf = `reports/Weekly_${compact(wFrom)}_to_${compact(wTo)}`;
+      const wl = await listDir(wf); if (wl.some(f => f.name === wname && f.size > 100)) weekly = `${wf}/${wname}`;
+    }
+  }
+  const cc = splitEmails(s.cc), log = sentLog.data || {};
+  const mk = (movie, distributor, to, attachments, problems) => {
+    const sent_at = log[sentKey(dateStr, movie, to)] || "";
+    return {key: jobKey(movie, to), movie, distributor, to, cc, files: attachments, problems, sent_at,
+            selected: !problems.length && !sent_at && attachments.length > 0};
+  };
+  const jobs = [], matched = new Set();
+  const box = splitEmails((fixed.box_office || []).join(","));
+  if (box.length) {
+    const p = commonMissing.map(n => "Missing " + n), a = [...common];
+    if (isLast) { if (weekly) a.push(weekly); else p.push("Last day of week: weekly all_admt report is missing"); }
+    jobs.push(mk("Box Office", "fixed group - every day", box, a, p));
+  }
+  const boxSet = new Set(box.map(e => e.toLowerCase()));
+  const wk = splitEmails((fixed.weekly || []).join(",")).filter(e => !boxSet.has(e.toLowerCase()));
+  if (isLast && wk.length) jobs.push(mk("Weekly All Admissions", "fixed group - last day only", wk,
+                                       weekly ? [weekly] : [], weekly ? [] : ["Weekly all_admt report is missing"]));
+  for (const g of groups) {
+    const emails = splitEmails((g.emails || []).join(",")); const movie = (g.movie || "").trim();
+    if (!movie || !emails.length) continue;
+    const item = byNorm[normalize(movie)]; if (!item) continue;
+    matched.add(normalize(movie));
+    const p = [], a = [];
+    if (item.ok) a.push(`${folder}/${item.file}`); else p.push(`Movie report is empty / no data (${item.file})`);
+    a.push(...common); commonMissing.forEach(n => p.push("Missing " + n));
+    if (isLast) { if (weekly) a.push(weekly); else p.push("Last day of week: weekly all_admt report is missing"); }
+    const bad = emails.filter(e => !EMAIL_RE.test(e)); if (bad.length) p.push("Invalid email: " + bad.join(", "));
+    jobs.push(mk(movie, g.distributor || "", emails, a, p));
+  }
+  const gNorms = new Set(groups.map(g => normalize(g.movie)));
+  return {date: dateStr, dayName: WEEKDAYS_PY[pyWd(day)], folderExists: files.length > 0, isLast, weekly,
+          wFrom: dmy(wFrom), wTo: dmy(wTo), jobs,
+          noGroup: runMovies.filter(m => !gNorms.has(normalize(m.movie))).map(m => m.movie),
+          noReport: groups.filter(g => g.movie && !matched.has(normalize(g.movie))).map(g => g.movie),
+          ready: !!(s.smtp_host && s.from_email)};
+}
+async function loadPlan(){
+  const iso = $("sendDate").value; if (!iso) return;
+  $("planList").innerHTML = `<div class="muted" style="padding:6px">Loading…</div>`;
+  try { PLAN = await buildPlan(isoToDmy(iso)); renderPlan(); }
+  catch(e){ $("planList").innerHTML = `<div class="card notice">${esc(e.message)}</div>`; }
+}
+function renderPlan(){
+  const p = PLAN; let h = "";
+  $("planHead").innerHTML = `<b>${p.dayName}</b> · week ${p.wFrom} → ${p.wTo}` +
+    (p.isLast ? (p.weekly ? `<br><span class="pur">Last day: weekly all_admt attached</span>`
+                          : `<br><span class="warn">Last day: ⚠️ weekly all_admt not found</span>`) : "");
+  if (!p.ready) h += `<div class="card notice">Email settings are not complete — open ⚙ Settings.</div>`;
+  if (!p.folderExists) h += `<div class="card notice">No daily reports for ${p.date}. Run the DAILY report first.</div>`;
+  else if (!p.jobs.length) h += `<div class="card notice">No email groups for this date. Open 👥 Groups.</div>`;
+  p.jobs.forEach((j, i) => {
+    const cls = j.problems.length ? "prob" : (j.sent_at ? "sent" : "");
+    h += `<div class="card job ${cls}">
+      <label class="top"><input type="checkbox" data-i="${i}" ${j.selected ? "checked" : ""} onchange="countSel()">
+        <div><div class="name">${esc(j.movie)}</div>${j.distributor ? `<div class="dim">${esc(j.distributor)}</div>` : ""}</div>
+        <div class="state">${j.sent_at ? `<span class="ok">sent<br>${esc(j.sent_at)}</span>` : ""}</div></label>
+      <div class="muted" style="margin-top:6px;word-break:break-all">To: ${esc(j.to.join(", "))}${j.cc.length ? `<br>Cc: ${esc(j.cc.join(", "))}` : ""}</div>
+      <div class="chips">${j.files.map(f => `<span class="chip" data-path="${esc(f)}">📎 ${esc(f.split("/").pop())}</span>`).join("")}</div>
+      ${j.problems.map(x => `<div class="warn" style="font-size:13px;margin-top:6px">⚠️ ${esc(x)}</div>`).join("")}
+    </div>`;
+  });
+  if (p.noGroup.length) h += `<div class="card notice">No email group (not sent):<br>• ${p.noGroup.map(esc).join("<br>• ")}</div>`;
+  if (p.noReport.length) h += `<div class="card muted">Groups with no report on this date:<br>• ${p.noReport.map(esc).join("<br>• ")}</div>`;
+  $("planList").innerHTML = h; countSel();
+  $("planList").querySelectorAll(".chip[data-path]").forEach(c => c.onclick = () => openPdf(c.dataset.path));
+}
+const selectedJobs = () => [...document.querySelectorAll("#planList input[type=checkbox]:checked")].map(c => PLAN.jobs[+c.dataset.i]).filter(j => j.files.length);
+function countSel(){
+  const n = PLAN ? selectedJobs().length : 0, busy = TASK && !TASK.done;
+  $("btnSend").textContent = busy && TASK.action === "send" ? "⏳ Sending on GitHub…" : `📧 SEND ${n} EMAIL${n === 1 ? "" : "S"}`;
+  $("btnSend").disabled = !n || !PLAN.ready || busy;
+}
+async function sendNow(){
+  const sel = selectedJobs(); const again = sel.filter(j => j.sent_at).map(j => j.movie);
+  if (again.length && !confirm("Already sent:\n" + again.join("\n") + "\n\nSend again?")) return;
+  const t = await startTask("send", {keys: sel.map(j => j.key)}, PLAN.date);
+  if (t) { $("sendMsg").className = "muted"; $("sendMsg").textContent = "Sending on GitHub — about 1 minute. Progress is on the Run tab."; countSel(); }
+}
+
+/* ═══ GROUPS ════════════════════════════════════════════════════ */
+let GFILE = null, GSHA = null, WEEK = null, MOVIES = [];
+async function loadGroups(day){
+  try {
+    await getSettings();
+    const [gf, mc] = await Promise.all([getJson("data/distributors.json", {weeks:{}, book:{}, fixed:{box_office:[], weekly:[]}}),
+                                        getJson("data/movies_cache.json", {movies:[]})]);
+    GFILE = gf.data; GSHA = gf.sha; GFILE.weeks ||= {}; GFILE.book ||= {}; GFILE.fixed ||= {box_office:[], weekly:[]};
+    const names = {}; (mc.data.movies || []).forEach(m => names[normalize(m)] ||= m);
+    Object.values(GFILE.weeks).flat().forEach(g => g.movie && (names[normalize(g.movie)] ||= g.movie));
+    MOVIES = Object.values(names).sort((a, b) => a.localeCompare(b));
+    showWeek(weekBounds(day, lastWd())[0]);
+  } catch(e){ toast(e.message, "err"); }
+}
+function showWeek(start){
+  WEEK = start; const end = addDays(start, 6);
+  const thisWeek = localIso(weekBounds(new Date(), lastWd())[0]) === localIso(start);
+  $("weekLbl").textContent = `${WEEKDAYS_PY[pyWd(start)].slice(0,3)} ${dmy(start).slice(0,5)} → ${WEEKDAYS_PY[pyWd(end)].slice(0,3)} ${dmy(end)}` + (thisWeek ? " · this week" : "");
+  $("fxBox").value = (GFILE.fixed.box_office || []).join(", ");
+  $("fxWeekly").value = (GFILE.fixed.weekly || []).join(", ");
+  $("dlMovies").innerHTML = MOVIES.map(m => `<option value="${esc(m)}">`).join("");
+  renderBook();
+  $("groupList").innerHTML = ""; (GFILE.weeks[localIso(start)] || []).forEach(addGroup); emptyHint();
+}
+function renderBook(){
+  const names = Object.keys(GFILE.book).sort((a, b) => a.localeCompare(b));
+  $("dlBook").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
+  $("bookList").innerHTML = names.length ? names.map((n, i) => `<div class="grp"><button class="del" data-n="${i}">✕</button>
+     <b>${esc(n)}</b><div class="muted" style="word-break:break-all">${esc(GFILE.book[n].join(", "))}</div></div>`).join("")
+     : `<div class="dim">Saved automatically when you save a movie group with a distributor name.</div>`;
+  $("bookList").querySelectorAll(".del").forEach(b => b.onclick = () => {
+    const n = names[+b.dataset.n]; if (!confirm(`Remove "${n}" from saved distributors? (press Save after)`)) return;
+    delete GFILE.book[n]; renderBook(); });
+}
+function emptyHint(){ $("groupsEmpty").textContent = $("groupList").children.length ? "" : "No movie groups this week — add one, copy last week, or load movies from the cinema system."; }
+function addGroup(g){
+  g = g || {}; const d = document.createElement("div"); d.className = "grp";
+  d.innerHTML = `<button class="del" title="remove">✕</button>
+    <input class="g-movie" list="dlMovies" placeholder="Movie (as in cinema system)" value="${esc(g.movie)}">
+    <input class="g-dist" list="dlBook" placeholder="Distributor (pick or type)" value="${esc(g.distributor)}">
+    <textarea class="g-emails" rows="2" placeholder="emails, separated by comma">${esc((g.emails || []).join(", "))}</textarea>`;
+  d.querySelector(".del").onclick = () => { d.remove(); emptyHint(); };
+  const dist = d.querySelector(".g-dist"), em = d.querySelector(".g-emails");
+  dist.addEventListener("change", () => {
+    const hit = Object.keys(GFILE.book).find(n => normalize(n) === normalize(dist.value));
+    if (hit) { dist.value = hit; em.value = GFILE.book[hit].join(", "); toast(`Filled emails of ${hit}`); }
+  });
+  $("groupList").appendChild(d); emptyHint(); return d;
+}
+function collectGroups(){
+  const out = [], problems = []; let skipped = 0;
+  document.querySelectorAll("#groupList .grp").forEach(d => {
+    const movie = d.querySelector(".g-movie").value.trim(), distributor = d.querySelector(".g-dist").value.trim();
+    const emails = splitEmails(d.querySelector(".g-emails").value);
+    if (!movie && !emails.length) return;
+    if (!emails.length) { skipped++; return; }          // movie without emails = not sent, not saved
+    if (!movie) return problems.push("A row has emails but no movie");
+    const bad = emails.filter(e => !EMAIL_RE.test(e)); if (bad.length) return problems.push(`'${movie}': invalid ${bad.join(", ")}`);
+    out.push({movie, distributor, emails});
+  });
+  return {groups: out, problems, skipped};
+}
+async function saveGroups(silent){
+  const {groups, problems, skipped} = collectGroups();
+  const box = splitEmails($("fxBox").value), wk = splitEmails($("fxWeekly").value);
+  const badFx = [...box, ...wk].filter(e => !EMAIL_RE.test(e)); if (badFx.length) problems.push("Fixed groups: invalid " + badFx.join(", "));
+  if (problems.length) { toast(problems.join("; "), "err"); return false; }
+  $("btnSaveGroups").disabled = true;
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const key = localIso(WEEK);
+      if (groups.length) GFILE.weeks[key] = groups; else delete GFILE.weeks[key];
+      GFILE.fixed = {box_office: box, weekly: wk};
+      for (const g of groups) if (g.distributor) {
+        const existing = Object.keys(GFILE.book).find(n => normalize(n) === normalize(g.distributor));
+        GFILE.book[existing || g.distributor] = g.emails;
+      }
+      try { GSHA = await putJson("data/distributors.json", GFILE, GSHA, `groups: week ${key}`); break; }
+      catch(e){ if (attempt === 0 && (e.status === 409 || e.status === 422)) {   // changed elsewhere → reload & reapply
+                  const fresh = await getJson("data/distributors.json", {}); const book = GFILE.book;
+                  GFILE = {...fresh.data, book: {...fresh.data.book, ...book}}; GFILE.weeks ||= {}; GSHA = fresh.sha; continue; }
+                throw e; }
+    }
+    renderBook();
+    if (!silent) toast(`✅ Saved ${groups.length} movie group(s)` + (skipped ? ` · ${skipped} movie(s) without emails were not saved` : ""), "ok");
+    return true;
+  } catch(e){ toast(e.message, "err"); return false; }
+  finally { $("btnSaveGroups").disabled = false; }
+}
+async function shiftWeek(days){ if (!(await saveGroups(true))) return; showWeek(addDays(WEEK, days)); }
+function copyPrev(){
+  const key = localIso(WEEK); const earlier = Object.keys(GFILE.weeks).filter(k => k < key && GFILE.weeks[k].length).sort();
+  if (!earlier.length) return toast("No earlier week has groups", "warn");
+  const have = new Set(collectGroups().groups.map(g => normalize(g.movie)));
+  let n = 0; GFILE.weeks[earlier[earlier.length - 1]].forEach(g => { if (!have.has(normalize(g.movie))) { addGroup(g); n++; } });
+  toast(`Copied ${n} group(s) — remove stopped movies, then Save`);
+}
+async function fetchMovies(){
+  const end = addDays(WEEK, 6); let day = new Date(); if (day > end) day = end; if (day < WEEK) day = WEEK;
+  const t = await startTask("movies", {}, dmy(day));
+  if (t) { $("btnFetch").disabled = true; $("btnFetch").textContent = "Reading on GitHub… ~2 min"; }
+}
+function onMoviesLoaded(t){
+  $("btnFetch").disabled = false; $("btnFetch").textContent = "↻ From cinema system";
+  const movies = t.result?.data?.movies || [];
+  if (!movies.length) return;
+  movies.forEach(m => { if (!MOVIES.some(x => normalize(x) === normalize(m))) MOVIES.push(m); });
+  $("dlMovies").innerHTML = MOVIES.map(m => `<option value="${esc(m)}">`).join("");
+  if (current !== "groups") return;
+  const have = new Set(collectGroups().groups.map(g => normalize(g.movie)).concat(
+    [...document.querySelectorAll("#groupList .g-movie")].map(i => normalize(i.value))));
+  document.querySelectorAll("#groupList .grp").forEach(d => { if (!d.querySelector(".g-movie").value.trim() && !d.querySelector(".g-emails").value.trim()) d.remove(); });
+  let n = 0; movies.forEach(m => { if (!have.has(normalize(m))) { addGroup({movie: m}); n++; } });
+  toast(`${movies.length} movie(s) · ${n} new row(s) — pick distributors, then Save`, "ok");
+}
+
+/* ═══ SETTINGS ══════════════════════════════════════════════════ */
+const SKEYS = ["smtp_host","smtp_port","security","username","from_email","from_name","cc","week_last_day","subject","subject_last_day","body"];
+async function loadSettings(){
+  try {
+    const s = await getSettings(true);
+    $("s_week_last_day").innerHTML = WEEKDAYS_PY.map((d, i) => `<option value="${i}">${d}</option>`).join("");
+    SKEYS.forEach(k => $("s_" + k).value = s[k] ?? "");
+    if (!$("testTo").value) $("testTo").value = s.from_email || "";
+    $("devInfo").textContent = `Connected to github.com/${CFG.owner}/${CFG.repo}`;
+  } catch(e){ toast(e.message, "err"); }
+}
+async function saveSettings(){
+  const s = {...(await getSettings(true))};
+  SKEYS.forEach(k => s[k] = $("s_" + k).value);
+  s.smtp_port = Number(s.smtp_port) || 465; s.week_last_day = Number(s.week_last_day);
+  const cc = splitEmails(s.cc); if (cc.some(e => !EMAIL_RE.test(e))) return toast("Invalid CC email", "err");
+  s.cc = cc.join(", ");
+  if (!EMAIL_RE.test(s.from_email)) return toast("From email is not valid", "err");
+  try { SETTINGS_SHA = await putJson("data/email_settings.json", s, SETTINGS_SHA, "settings"); SETTINGS = s; toast("✅ Settings saved", "ok"); dateHint(); }
+  catch(e){ toast(e.status === 409 || e.status === 422 ? "Settings changed elsewhere — reopen Settings and try again." : e.message, "err"); }
+}
+function testEmail(){
+  const to = $("testTo").value.trim(); if (!EMAIL_RE.test(to)) return toast("Enter a valid address", "warn");
+  startTask("test_email", {to}).then(t => t && toast("Test email started — result on the Run tab (~1 min)"));
+}
+
+/* ═══ START ═════════════════════════════════════════════════════ */
+async function startApp(){
+  show("app");
+  BRANCH = CFG.branch || "main";
+  $("runDate").value = $("sendDate").value = localIso(new Date());
+  try { await getSettings(true); } catch(e){ if (e.status === 401) { toast(e.message, "err"); } }
+  dateHint(); loadRuns();
+  const saved = JSON.parse(localStorage.getItem("hz_task") || "null");
+  if (saved) { TASK = saved; renderTask(); if (!TASK.done) pollTask(); }
+}
+(function boot(){
+  if ("serviceWorker" in navigator) {} // no offline cache: always fresh data
+  CFG = JSON.parse(localStorage.getItem("hz_cfg") || "null");
+  if (!CFG) return show("setup");
+  TOKEN = sessionStorage.getItem("hz_t") || "";
+  if (TOKEN) return startApp();
+  show("unlock"); setTimeout(() => $("pin").focus(), 100);
+})();
+</script>
+</body>
+</html>
