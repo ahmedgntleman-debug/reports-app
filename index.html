@@ -265,9 +265,9 @@ const WEEKDAYS_PY = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturda
 const pyWd = d => (d.getDay() + 6) % 7;
 const normalize = s => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 const splitEmails = t => { const out = [], seen = new Set();
-  String(t || "").split(/[,;\s]+/).forEach(e => { e = e.trim(); if (e && !seen.has(e.toLowerCase())) { seen.add(e.toLowerCase()); out.push(e); } });
+  String(t || "").split(/[,;\s]+/).forEach(e => { e = e.trim().replace(/^[<>"']+|[<>"']+$/g, ""); if (e && !seen.has(e.toLowerCase())) { seen.add(e.toLowerCase()); out.push(e); } });
   return out; };
-const EMAIL_RE = /^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$/;
+const EMAIL_RE = /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/;
 const COMMON = ["all_admt.pdf", "Box_Office_Summary.pdf"];
 const WF = "hz.yml";
 
