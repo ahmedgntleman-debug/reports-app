@@ -6,11 +6,12 @@
 <meta name="theme-color" content="#0A0A0A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="HZ Reports">
+<meta name="apple-mobile-web-app-title" content="Reports Collector">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" href="icon-192.png">
-<title>HZ Reports</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="icon-192.png">
+<title>Reports Collector</title>
 <style>
 :root{
   --orange:#FF6B00; --orange-d:#CC5500; --purple:#6C3FC5; --bg:#0A0A0A; --card:#121212; --card2:#181818;
@@ -82,6 +83,17 @@ nav button.on{color:var(--orange)}
   background:#222;border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;
   opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;max-width:640px;margin:0 auto}
 .toast.show{opacity:1;transform:none}
+#viewer{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column}
+#viewer.on{display:flex}
+#viewer .vbar{display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px;background:#111;border-bottom:1px solid var(--border)}
+#viewer .vbar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#viewer .vbar button,#viewer .vbar a{flex:none;padding:8px 12px;font-size:14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);text-decoration:none;font-weight:600}
+#vpages{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px;background:#2a2a2a}
+#vpages canvas{display:block;margin:0 auto 10px;background:#fff;box-shadow:0 2px 10px #0008}
+.rep{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)}
+.rep:first-of-type{border-top:0}
+.rep .n{flex:1;word-break:break-all;font-size:14px}
+.rep button{flex:none}
 .center{max-width:420px;margin:8vh auto 0;padding:0 16px;text-align:center}
 .center img{width:84px;height:84px;border-radius:18px}
 #pin{text-align:center;font-size:26px;letter-spacing:8px;margin:18px 0 12px}
@@ -101,7 +113,7 @@ ol.steps li{margin-bottom:6px}
 <!-- ═════════ FIRST-TIME SETUP ═════════ -->
 <div id="setup" class="view center">
   <img src="icon.png" alt="">
-  <h2 style="margin:12px 0 4px">HZ Cinema Reports</h2>
+  <h2 style="margin:12px 0 4px">Reports Collector</h2>
   <div class="muted" style="margin-bottom:16px">Connect this device (once)</div>
   <div class="field"><div>GitHub username</div><input id="su_owner" autocapitalize="off" autocomplete="off"></div>
   <div class="field"><div>Storage repository name</div><input id="su_repo" value="hz-reports" autocapitalize="off"></div>
@@ -116,7 +128,7 @@ ol.steps li{margin-bottom:6px}
 <!-- ═════════ PIN ═════════ -->
 <div id="unlock" class="view center">
   <img src="icon.png" alt="">
-  <h2 style="margin:12px 0 4px">HZ Cinema Reports</h2>
+  <h2 style="margin:12px 0 4px">Reports Collector</h2>
   <div class="muted">Enter your PIN</div>
   <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
   <button class="b-orange big" style="width:100%" id="pinBtn" onclick="unlock()">Open</button>
@@ -127,7 +139,7 @@ ol.steps li{margin-bottom:6px}
 <div id="app" style="display:none">
 <header>
   <img src="icon.png" alt="">
-  <div><div class="t1">HZ CINEMA</div><div class="t2">REPORTS</div></div>
+  <div><div class="t1">REPORTS</div><div class="t2">COLLECTOR</div></div>
   <div class="live" id="live"></div>
 </header>
 
@@ -148,6 +160,8 @@ ol.steps li{margin-bottom:6px}
     <div class="bar" id="bar"><div id="barFill"></div></div>
     <div id="taskMsg">Ready. Reports run on GitHub — your PC can be off.</div>
     <div id="taskMeta" class="dim" style="margin-top:4px"></div>
+    <button id="btnCancel" class="b-small" style="width:100%;margin-top:12px;display:none;border-color:var(--red);color:var(--red)" onclick="cancelTask()">✖ Cancel and start over</button>
+    <div id="runReports" style="display:none;margin-top:12px"></div>
     <button id="goSend" class="b-green" style="width:100%;margin-top:12px;display:none" onclick="goSendAfterRun()">📧 Review & send emails</button>
     <details id="logBox" style="margin-top:8px;display:none"><summary>Details</summary><div class="log" id="taskLog"></div></details>
   </div>
@@ -247,11 +261,16 @@ ol.steps li{margin-bottom:6px}
 </nav>
 </div>
 <div class="toast" id="toast"></div>
+<div id="viewer">
+  <div class="vbar"><button onclick="closeViewer()">✕</button><b id="vtitle"></b>
+    <button onclick="zoom(-1)">−</button><button onclick="zoom(1)">+</button><a id="vdl" download>⬇</a></div>
+  <div id="vpages"></div>
+</div>
 
 <script>
 "use strict";
 /* ═══════════════════════════════════════════════════════════════
-   HZ Cinema Reports — web app (PC + phone)
+   Reports Collector — web app (PC + phone)
    Data lives in a private GitHub repository; report runs and emails
    happen on GitHub Actions (workflow .github/workflows/hz.yml).
    ═══════════════════════════════════════════════════════════════ */
@@ -332,14 +351,54 @@ async function listDir(path){
   try { const r = await gh(`${repoPath()}/contents/${path}?ref=${BRANCH}`); return Array.isArray(r) ? r : []; }
   catch(e){ if (e.status === 404) return []; throw e; }
 }
+/* ── PDF viewer: read the report inside the app (works on phones) ── */
+let PDFJS = null, VDOC = null, VZOOM = 1, VURL = "";
+function loadPdfJs(){
+  if (PDFJS) return Promise.resolve(PDFJS);
+  return new Promise((res, rej) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; PDFJS = window.pdfjsLib; res(PDFJS); };
+    sc.onerror = () => rej(new Error("viewer could not load"));
+    document.head.appendChild(sc);
+  });
+}
 async function openPdf(path){
-  const w = window.open("", "_blank");
+  const name = path.split("/").pop();
+  $("vtitle").textContent = name; $("vpages").innerHTML = `<div class="muted" style="padding:20px;text-align:center">Loading ${esc(name)}…</div>`;
+  $("viewer").classList.add("on"); document.body.style.overflow = "hidden";
   try {
     const r = await gh(`${repoPath()}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${BRANCH}`, {}, true);
-    const url = URL.createObjectURL(new Blob([await r.arrayBuffer()], {type:"application/pdf"}));
-    if (w) w.location = url; else location.href = url;
-  } catch(e){ if (w) w.close(); toast(e.message, "err"); }
+    const buf = await r.arrayBuffer();
+    if (VURL) URL.revokeObjectURL(VURL);
+    VURL = URL.createObjectURL(new Blob([buf], {type:"application/pdf"}));
+    $("vdl").href = VURL; $("vdl").download = name;
+    try { const lib = await loadPdfJs(); VDOC = await lib.getDocument({data: new Uint8Array(buf)}).promise; VZOOM = 1; await renderPdf(); }
+    catch(_){ $("vpages").innerHTML = `<iframe src="${VURL}" style="width:100%;height:100%;border:0;background:#fff"></iframe>`; }
+  } catch(e){ closeViewer(); toast(e.message, "err"); }
 }
+async function renderPdf(){
+  const box = $("vpages"); box.innerHTML = "";
+  const width = Math.max(320, box.clientWidth - 20) * VZOOM, dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  for (let i = 1; i <= VDOC.numPages; i++) {
+    const pg = await VDOC.getPage(i), v1 = pg.getViewport({scale: 1});
+    const vp = pg.getViewport({scale: width / v1.width * dpr});
+    const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+    c.style.width = (vp.width / dpr) + "px"; c.style.height = (vp.height / dpr) + "px";
+    box.appendChild(c); await pg.render({canvasContext: c.getContext("2d"), viewport: vp}).promise;
+  }
+}
+function zoom(d){ if (!VDOC) return; VZOOM = Math.min(4, Math.max(0.5, VZOOM * (d > 0 ? 1.4 : 1/1.4))); renderPdf(); }
+function closeViewer(){ $("viewer").classList.remove("on"); document.body.style.overflow = ""; VDOC = null; }
+function reportsList(paths, title){
+  if (!paths.length) return "";
+  return `<div class="label" style="margin-top:4px">${title}</div>` + paths.map(p => {
+    const n = p.split("/").pop(), bad = /_WRONG_DATE\.pdf$/i.test(n);
+    return `<div class="rep"><div class="n ${bad ? "err" : ""}">${bad ? "❌ " : "📄 "}${esc(n)}${bad ? "<div class='dim'>wrong date — will not be emailed</div>" : ""}</div>
+      <button class="b-small" data-path="${esc(p)}">👁 View</button></div>`;
+  }).join("");
+}
+function wireViews(el){ el.querySelectorAll("[data-path]").forEach(b => b.onclick = () => openPdf(b.dataset.path)); }
 
 /* ── setup / unlock ──────────────────────────────────────────── */
 async function doSetup(){
@@ -437,11 +496,26 @@ const STEP_TEXT = {
   "Install Python packages": "Preparing…", "Cache browser": "Preparing the browser…", "Install browser": "Preparing the browser…",
   "Save results": "Saving results…",
 };
+async function cancelTask(){
+  if (!TASK || TASK.done) return;
+  if (!confirm("Stop this task? You can start it again after it stops.")) return;
+  TASK.cancelRequested = true; TASK.cancelAt = Date.now();
+  localStorage.setItem("hz_task", JSON.stringify(TASK));
+  $("btnCancel").disabled = true; $("btnCancel").textContent = "Stopping…";
+  if (TASK.runId) await sendCancel();
+  pollTask();
+}
+async function sendCancel(force){
+  try { await gh(`${repoPath()}/actions/runs/${TASK.runId}/${force ? "force-cancel" : "cancel"}`, {method:"POST"}); TASK.cancelSent = true; }
+  catch(e){ if (e.status !== 409) toast(e.message, "err"); }
+}
 async function pollTask(){
   clearTimeout(taskTimer);
   if (!TASK || TASK.done) return;
   try {
     if (!TASK.runId) { const run = await findRun(TASK.reqId); if (run) TASK.runId = run.id; }
+    if (TASK.runId && TASK.cancelRequested && !TASK.cancelSent) await sendCancel();
+    if (TASK.runId && TASK.cancelRequested && TASK.cancelSent && !TASK.forceSent && Date.now() - TASK.cancelAt > 40000) { TASK.forceSent = true; await sendCancel(true); }
     if (TASK.runId) {
       const run = await gh(`${repoPath()}/actions/runs/${TASK.runId}`);
       TASK.status = run.status; TASK.conclusion = run.conclusion; TASK.url = run.html_url;
@@ -456,6 +530,8 @@ async function pollTask(){
         TASK.done = true; onTaskDone();
       }
       localStorage.setItem("hz_task", JSON.stringify(TASK));
+    } else if (TASK.cancelRequested && Date.now() - TASK.cancelAt > 30000) {
+      TASK.done = true; TASK.conclusion = "cancelled"; TASK.result = {messages:["Cancelled before GitHub started it."]};
     } else if (Date.now() - TASK.started > 120000) {
       TASK.done = true; TASK.conclusion = "failure"; TASK.result = {messages:["GitHub did not start the task. Check that Actions are enabled in the repository."]};
     }
@@ -493,16 +569,26 @@ function renderTask(){
       : (STEP_TEXT[t.stepName] || "Working…");
     $("taskMeta").textContent = t.lastError ? "⚠️ " + t.lastError : "You can close this page — it keeps running on GitHub.";
     $("live").innerHTML = `<span class="warn">● ${esc(label)}</span><br>${mins}:${pad(secs)}`;
-    $("goSend").style.display = "none"; $("logBox").style.display = "none";
+    $("goSend").style.display = "none"; $("logBox").style.display = "none"; $("runReports").style.display = "none";
+    $("btnCancel").style.display = "block";
+    $("btnCancel").disabled = !!t.cancelRequested; $("btnCancel").textContent = t.cancelRequested ? "Stopping… (up to 1 min)" : "✖ Cancel and start over";
+    if (t.cancelRequested) $("taskMsg").textContent = "Stopping the task…";
   } else {
+    $("btnCancel").style.display = "none";
     bar.classList.remove("indet");
     const ok = t.conclusion === "success" && (!t.result || t.result.ok !== false);
     $("barFill").style.width = "100%"; $("barFill").style.background = ok ? "var(--green)" : "var(--red)";
     $("pct").textContent = "";
     const msgs = t.result?.messages || [];
     const last = [...msgs].reverse().find(m => /🎉|✅|❌|⚠️|Sent|Movies on/.test(m)) || msgs[msgs.length - 1] || "";
-    $("taskMsg").className = ok ? "ok" : "err";
-    $("taskMsg").textContent = (ok ? "✅ " : "❌ ") + (last.replace(/^\[[\d:]+\]\s*/, "") || (ok ? "Finished." : "Failed — open Details."));
+    const cancelled = t.conclusion === "cancelled";
+    $("taskMsg").className = ok ? "ok" : cancelled ? "warn" : "err";
+    $("taskMsg").textContent = cancelled ? "✖ Cancelled. You can start again." :
+      (ok ? "✅ " : "❌ ") + (last.replace(/^\[[\d:]+\]\s*/, "") || (ok ? "Finished." : "Failed — open Details."));
+    if (cancelled) $("barFill").style.background = "var(--amber)";
+    const pdfs = (t.result?.data?.pdfs || []).map(n => `${t.result.data.folder}/${n}`);
+    $("runReports").innerHTML = t.action === "daily" ? reportsList(pdfs, "REVIEW THE REPORTS") : "";
+    $("runReports").style.display = pdfs.length && t.action === "daily" ? "block" : "none"; wireViews($("runReports"));
     $("taskMeta").innerHTML = (t.result?.finished ? "Finished " + esc(t.result.finished) : "") +
       (t.url ? ` · <a href="${esc(t.url)}" target="_blank" style="color:var(--dim)">GitHub log</a>` : "");
     $("taskLog").textContent = msgs.join("\n") || "No details saved.";
@@ -514,7 +600,7 @@ function renderTask(){
 function onTaskDone(){
   const t = TASK;
   const ok = t.conclusion === "success";
-  toast(`${LABEL[t.action]}: ${ok ? "finished" : "failed"}`, ok ? "ok" : "err");
+  toast(`${LABEL[t.action]}: ${ok ? "finished" : t.conclusion === "cancelled" ? "cancelled" : "failed"}`, ok ? "ok" : "err");
   loadRuns();
   if (t.action === "send" && current === "send") loadPlan();
   if (t.action === "test_email") $("testTo").placeholder = ok ? "✅ test email sent" : "❌ test failed — see Run tab";
@@ -611,7 +697,9 @@ async function buildPlan(dateStr){
     jobs.push(mk(movie, g.distributor || "", emails, a, p));
   }
   const gNorms = new Set(groups.map(g => normalize(g.movie)));
-  return {date: dateStr, dayName: WEEKDAYS_PY[pyWd(day)], folderExists: files.length > 0, isLast, weekly,
+  const allPdfs = files.filter(f => /\.pdf$/i.test(f.name)).map(f => `${folder}/${f.name}`);
+  if (weekly && !allPdfs.includes(weekly)) allPdfs.push(weekly);
+  return {date: dateStr, dayName: WEEKDAYS_PY[pyWd(day)], folderExists: files.length > 0, isLast, weekly, allPdfs,
           wFrom: dmy(wFrom), wTo: dmy(wTo), jobs,
           noGroup: runMovies.filter(m => !gNorms.has(normalize(m.movie))).map(m => m.movie),
           noReport: groups.filter(g => g.movie && !matched.has(normalize(g.movie))).map(g => g.movie),
@@ -625,6 +713,7 @@ async function loadPlan(){
 }
 function renderPlan(){
   const p = PLAN; let h = "";
+  if (p.allPdfs.length) h += `<details class="card" open><summary>📄 Review the reports of ${esc(p.date)} (${p.allPdfs.length})</summary><div style="margin-top:8px">${reportsList(p.allPdfs, "")}</div></details>`;
   $("planHead").innerHTML = `<b>${p.dayName}</b> · week ${p.wFrom} → ${p.wTo}` +
     (p.isLast ? (p.weekly ? `<br><span class="pur">Last day: weekly all_admt attached</span>`
                           : `<br><span class="warn">Last day: ⚠️ weekly all_admt not found</span>`) : "");
@@ -646,7 +735,7 @@ function renderPlan(){
   if (p.noReport.length) h += `<div class="card muted">Groups with no report on this date:<br>• ${p.noReport.map(esc).join("<br>• ")}</div>`;
   $("planList").innerHTML = h; countSel();
   $("selRow").style.display = p.jobs.length ? "flex" : "none";
-  $("planList").querySelectorAll(".chip[data-path]").forEach(c => c.onclick = () => openPdf(c.dataset.path));
+  wireViews($("planList"));
 }
 function selectAll(on){
   document.querySelectorAll("#planList input[type=checkbox]").forEach(c => {

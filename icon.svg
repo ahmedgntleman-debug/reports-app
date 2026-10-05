@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF8A1F"/><stop offset="1" stop-color="#E5480C"/>
+    </linearGradient>
+    <linearGradient id="tray" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B2B2B"/><stop offset="1" stop-color="#141414"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- back sheet -->
+  <rect x="150" y="70" width="200" height="250" rx="18" fill="#FFFFFF" opacity="0.45" transform="rotate(-8 250 195)"/>
+  <!-- front sheet -->
+  <rect x="166" y="78" width="200" height="250" rx="18" fill="#FFFFFF"/>
+  <rect x="196" y="116" width="96" height="16" rx="8" fill="#E5480C"/>
+  <!-- bar chart on the report -->
+  <rect x="196" y="230" width="26" height="62" rx="6" fill="#1A1A1A"/>
+  <rect x="236" y="196" width="26" height="96" rx="6" fill="#1A1A1A"/>
+  <rect x="276" y="168" width="26" height="124" rx="6" fill="#FF6B00"/>
+  <rect x="316" y="212" width="26" height="80" rx="6" fill="#1A1A1A"/>
+  <!-- collector tray -->
+  <path d="M84 300 h96 l24 44 h104 l24 -44 h96 v104 a32 32 0 0 1 -32 32 h-280 a32 32 0 0 1 -32 -32 z" fill="url(#tray)"/>
+  <!-- down arrow into tray -->
+  <circle cx="256" cy="378" r="0" fill="none"/>
+  <path d="M246 360 h20 v30 h18 l-28 30 l-28 -30 h18 z" fill="#FF6B00"/>
+</svg>
