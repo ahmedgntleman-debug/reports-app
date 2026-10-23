@@ -471,10 +471,22 @@ function dateHint(){
 const LABEL = {daily:"Daily report", weekly:"Weekly report", send:"Sending emails", movies:"Reading movies", test_email:"Test email", check:"Cinema login test"};
 let TASK = null, taskTimer = null;
 
+let STARTING = false;
 async function startTask(action, extra = {}, date){
+  if (STARTING) return null;                      // ignore a second tap while the first is being sent
   if (TASK && !TASK.done) { toast("Please wait — another task is running.", "warn"); return null; }
+  STARTING = true; $("btnDaily").disabled = $("btnWeekly").disabled = true;
+  try { return await startTaskNow(action, extra, date); }
+  finally { STARTING = false; if (!TASK || TASK.done) $("btnDaily").disabled = $("btnWeekly").disabled = false; }
+}
+async function startTaskNow(action, extra, date){
   date = date || isoToDmy($("runDate").value);
   if (["daily","weekly","movies","send"].includes(action) && !date) { toast("Pick a date", "warn"); return null; }
+  try {
+    const r = await gh(`${repoPath()}/actions/workflows/${WF}/runs?per_page=5`);
+    const busy = (r.workflow_runs || []).find(x => x.status !== "completed");
+    if (busy && !confirm(`"${(busy.display_title || "").replace(/\s*\[.*\]\s*$/, "")}" is still running on GitHub (maybe from another device).\n\nStart another task anyway? It will wait until that one finishes.`)) return null;
+  } catch(_) {}
   const reqId = new Date().toISOString().replace(/\D/g, "").slice(0, 14) + "-" + Math.random().toString(36).slice(2, 7);
   try {
     await gh(`${repoPath()}/actions/workflows/${WF}/dispatches`, {method:"POST", body: JSON.stringify({ref: BRANCH,
