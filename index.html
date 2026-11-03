@@ -114,7 +114,8 @@ ol.steps li{margin-bottom:6px}
 <div id="setup" class="view center">
   <img src="icon.png" alt="">
   <h2 style="margin:12px 0 4px">Reports Collector</h2>
-  <div class="muted" style="margin-bottom:16px">Connect this device (once)</div>
+  <div class="muted" id="suTitle" style="margin-bottom:6px">Connect this device (once)</div>
+  <div class="dim" id="suHelp" style="margin-bottom:16px"></div>
   <div class="field"><div>GitHub username</div><input id="su_owner" autocapitalize="off" autocomplete="off"></div>
   <div class="field"><div>Storage repository name</div><input id="su_repo" value="hz-reports" autocapitalize="off"></div>
   <div class="field"><div>Access token (starts with github_pat_)</div><input id="su_token" type="password" autocomplete="off"></div>
@@ -331,7 +332,9 @@ async function gh(path, opt = {}, raw = false){
     let m = ""; try { m = (await r.json()).message; } catch(_) {}
     const e = new Error(r.status === 401 ? "GitHub token is not valid or has expired." :
                         r.status === 403 ? "GitHub refused: " + (m || "check the token permissions") : (m || "GitHub error " + r.status));
-    e.status = r.status; throw e;
+    e.status = r.status;
+    if (r.status === 401 && !opt.token) tokenExpired();   // saved key stopped working
+    throw e;
   }
   return raw ? r : r.json();
 }
@@ -417,7 +420,7 @@ async function doSetup(){
       throw new Error(e.status === 404 ? "Repository found, but the workflow file .github/workflows/hz.yml is missing." : e.message); });
     CFG = {owner, repo, branch: BRANCH, enc: await lockToken(token, p1)};
     localStorage.setItem("hz_cfg", JSON.stringify(CFG));
-    TOKEN = token; sessionStorage.setItem("hz_t", token);
+    TOKEN = token; sessionStorage.setItem("hz_t", token); EXPIRED_SHOWN = false;
     ["su_token","su_pin1","su_pin2"].forEach(i => $(i).value = "");
     startApp();
   } catch(e){
@@ -432,6 +435,17 @@ async function unlock(){
 }
 $("pin").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
 function lock(){ TOKEN = ""; sessionStorage.removeItem("hz_t"); show("unlock"); setTimeout(() => $("pin").focus(), 100); }
+let EXPIRED_SHOWN = false;
+function tokenExpired(){
+  if (EXPIRED_SHOWN) return; EXPIRED_SHOWN = true;
+  clearTimeout(taskTimer);
+  TOKEN = ""; sessionStorage.removeItem("hz_t"); localStorage.removeItem("hz_task"); TASK = null;
+  $("su_owner").value = CFG?.owner || ""; $("su_repo").value = CFG?.repo || "hz-reports";
+  $("suTitle").textContent = "Your GitHub access key has expired";
+  $("suTitle").className = "warn";
+  $("suHelp").innerHTML = `Create a new key at <b>github.com/settings/personal-access-tokens</b> (choose the longest expiry), paste it below and choose your PIN. Your groups, settings and reports are safe.`;
+  show("setup");
+}
 function forgetDevice(){
   if (!confirm("Disconnect this device? You will need the GitHub token again.")) return;
   localStorage.removeItem("hz_cfg"); sessionStorage.removeItem("hz_t"); localStorage.removeItem("hz_task"); location.reload();
