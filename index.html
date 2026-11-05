@@ -322,6 +322,17 @@ async function unlockToken(enc, pin){
 
 /* ── GitHub API ──────────────────────────────────────────────── */
 async function gh(path, opt = {}, raw = false){
+  const isGet = !opt.method || opt.method === "GET";
+  for (let attempt = 1; ; attempt++) {
+    try { return await ghOnce(path, opt, raw); }
+    catch(e){
+      // GitHub sometimes has short outages (error 500/502/503): wait and try again
+      if (isGet && e.status >= 500 && attempt < 3) { await new Promise(r => setTimeout(r, 2000 * attempt)); continue; }
+      throw e;
+    }
+  }
+}
+async function ghOnce(path, opt = {}, raw = false){
   const r = await fetch(API() + path, {cache:"no-store", ...opt, headers:{
     "Authorization": `Bearer ${opt.token || TOKEN}`, "X-GitHub-Api-Version": "2022-11-28",
     "Accept": raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
@@ -331,7 +342,9 @@ async function gh(path, opt = {}, raw = false){
   if (!r.ok) {
     let m = ""; try { m = (await r.json()).message; } catch(_) {}
     const e = new Error(r.status === 401 ? "GitHub token is not valid or has expired." :
-                        r.status === 403 ? "GitHub refused: " + (m || "check the token permissions") : (m || "GitHub error " + r.status));
+                        r.status === 403 ? "GitHub refused: " + (m || "check the token permissions") :
+                        r.status >= 500 ? "GitHub is having a temporary problem (error " + r.status + "). Please try again in a few minutes." :
+                        (m || "GitHub error " + r.status));
     e.status = r.status;
     if (r.status === 401 && !opt.token) tokenExpired();   // saved key stopped working
     throw e;
@@ -502,10 +515,22 @@ async function startTaskNow(action, extra, date){
     if (busy && !confirm(`"${(busy.display_title || "").replace(/\s*\[.*\]\s*$/, "")}" is still running on GitHub (maybe from another device).\n\nStart another task anyway? It will wait until that one finishes.`)) return null;
   } catch(_) {}
   const reqId = new Date().toISOString().replace(/\D/g, "").slice(0, 14) + "-" + Math.random().toString(36).slice(2, 7);
-  try {
-    await gh(`${repoPath()}/actions/workflows/${WF}/dispatches`, {method:"POST", body: JSON.stringify({ref: BRANCH,
-      inputs: {action, date: date || "", extra: JSON.stringify(extra), request_id: reqId}})});
-  } catch(e){ toast(e.message, "err"); return null; }
+  const body = JSON.stringify({ref: BRANCH, inputs: {action, date: date || "", extra: JSON.stringify(extra), request_id: reqId}});
+  for (let attempt = 1; ; attempt++) {
+    try { await gh(`${repoPath()}/actions/workflows/${WF}/dispatches`, {method:"POST", body}); break; }
+    catch(e){
+      // not for "send": if GitHub did start it, a retry would email everyone twice
+      if (e.status >= 500 && attempt < 3 && action !== "send") {
+        toast("GitHub is slow — trying again…", "warn");
+        await new Promise(r => setTimeout(r, 4000 * attempt));
+        // never start the same task twice (important for sending emails)
+        try { if (await findRun(reqId)) break; } catch(_) {}
+        continue;
+      }
+      toast(e.status >= 500 && action === "send" ? e.message + " Check Recent runs on the Run tab before sending again." : e.message, "err");
+      return null;
+    }
+  }
   TASK = {reqId, action, date, started: Date.now(), runId: null, status: "queued", done: false};
   localStorage.setItem("hz_task", JSON.stringify(TASK));
   if (current !== "run" && ["daily","weekly","check"].includes(action)) tab("run");
